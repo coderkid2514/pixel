@@ -1,0 +1,2224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Containment Protocol</title>
+  <style>
+@font-face {
+  font-family: 'PressStart2P';
+  src: url("{{ url_for('static', filename='fonts/PressStart2P-Regular.ttf') }}") format('truetype');
+  font-display: block;
+}
+:root {
+  --bg-primary: #121214;
+  --bg-panel: #1a1a1e;
+  --bg-btn: #2a2a32;
+  --bg-btn-active: #3498db;
+  --text-main: #e0e0e6;
+  --border-color: #3e3e4a;
+}
+body {
+  margin: 0;
+  padding: 20px;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: 'PressStart2P', -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+.led-text-generator,
+.led-text-generator *,
+.slider-group label span:first-child {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+    h1 {
+      margin: 0 0 15px 0;
+      font-size: 1.8rem;
+      letter-spacing: 0.5px;
+    }
+    .main-container {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      max-width: 1000px;
+      width: 100%;
+      align-items: flex-start;
+    }
+    @media (max-width: 800px) {
+      .main-container {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+    .canvas-container {
+      background-color: var(--bg-panel);
+      padding: 10px;
+      border-radius: 8px;
+      border: 2px solid var(--border-color);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    canvas {
+      display: block;
+      background-color: #000;
+      width: 450px;
+      height: 450px;
+      image-rendering: pixelated;
+      cursor: crosshair;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: rgba(0,0,0,0);
+    }
+    .control-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background-color: var(--bg-panel);
+      padding: 20px;
+      border-radius: 8px;
+      border: 2px solid var(--border-color);
+      height: auto;
+      min-height: 450px;
+      box-sizing: border-box;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .stats-row {
+      font-family: monospace;
+      background: #000;
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+    }
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .slider-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--bg-btn-active);
+    }
+    .sys-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .led-text-generator {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background-color: #111113;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
+    .led-text-generator input[type="text"] {
+      background: #000;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .led-text-generator select {
+      background: var(--bg-btn);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .element-ui-wrapper {
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      background-color: #111113;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    .element-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 8px;
+    }
+    .btn {
+      background-color: var(--bg-btn);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 8px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s ease, transform 0.05s ease;
+      user-select: none;
+    }
+    .btn:hover {
+      background-color: #3a3a46;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn.active {
+      background-color: var(--bg-btn-active);
+      border-color: #5dade2;
+      font-weight: bold;
+      color: #fff;
+    }
+    .color-preview {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      border: 1px solid rgba(255,255,255,0.2);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pixel Containment Protocol</h1>
+  <div class="main-container">
+    <div class="canvas-container">
+      <canvas id="game" width="500" height="500"></canvas>
+    </div>
+    <div class="control-panel">
+      <div class="stats-row">
+        <span id="fps-display">FPS: 0</span>
+        <span id="particle-display">Particles: 0</span>
+      </div>
+      <div class="slider-group">
+        <label for="brush-size">
+          <span>Brush Radius (Scroll Supported):</span>
+          <span id="brush-val" style="font-family: monospace;">4</span>
+        </label>
+        <input type="range" id="brush-size" min="1" max="25" value="4">
+      </div>
+      <div class="slider-group">
+        <label for="game-speed">
+          <span>Simulation Speed:</span>
+          <span id="speed-val" style="font-family: monospace;">1.0x</span>
+        </label>
+        <input type="range" id="game-speed" min="0.1" max="1.0" step="0.05" value="1.0">
+      </div>
+      <div class="sys-buttons">
+        <button id="btn-pause" class="btn" style="justify-content: center;">Pause</button>
+        <button id="btn-clear" class="btn" style="justify-content: center; background-color: #c0392b;">Clear World</button>
+      </div>
+   <div class="led-text-generator">
+  <button id="btn-toggle-led" class="btn" style="justify-content: center; width: 100%; font-weight: bold; background-color: #2c3e50;">
+          Mode: Painting elements
+        </button>
+  <div id="led-tool-options" style="display: none; flex-direction: column; gap: 8px; margin-top: 5px;">
+    <p style="margin: 0; font-size: 0.75rem; color: #aaa;">Type text, select color, then drag a box on the simulation window to generate.</p>
+    <input type="text" id="led-text-input" placeholder="Type text here..." value="HELLOWORLD">
+    <select id="led-text-color" style="width: 100%;">
+      <option value="red">Red LEDs</option>
+      <option value="green">Green LEDs</option>
+      <option value="blue">Blue LEDs</option>
+    </select>
+  </div>
+</div>
+      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 2px 0;">
+      <div class="element-ui-wrapper">
+        <div id="element-ui-grid" class="element-grid"></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel-section vault-container" style="margin-top: 15px; padding: 10px; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 4px;">
+  <h3 style="margin: 0 0 10px 0; font-size: 11px; color: var(--text-main); letter-spacing: 1px;">SECRET VAULT STORAGE</h3>
+  <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+    <input type="text" id="vault-name" placeholder="slot_name" style="flex: 1; padding: 6px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-main); font-family: inherit; font-size: 10px;">
+    <button onclick="saveToSecretVault()" class="btn" style="font-size: 10px; padding: 5px 10px;">Vault Save</button>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 5px;">
+    <select id="vault-select" style="width: 100%; padding: 6px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-main); font-family: inherit; font-size: 10px; cursor: pointer;">
+      <option value="">-- Select Save Slot --</option>
+    </select>
+    <div style="display: flex; gap: 5px;">
+      <button onclick="loadFromSecretVault()" class="btn" style="flex: 1; font-size: 10px; padding: 5px 10px;">Vault Load</button>
+      <button onclick="deleteFromSecretVault()" class="btn btn-danger" style="flex: 1; font-size: 10px; padding: 5px 10px; background: #c0392b; color: white; border: 1px solid #962d22;">Delete Slot</button>
+    </div>
+  </div>
+</div>
+<script>
+let W = 500;
+let H = 500;
+let SIZE = W * H;
+const FONT = {
+  'A': [0x1f,0x14,0x14,0x1f,0x00], 'B': [0x1f,0x15,0x15,0x0a,0x00], 'C': [0x0e,0x11,0x11,0x11,0x00],
+  'D': [0x1f,0x11,0x11,0x0e,0x00], 'E': [0x1f,0x15,0x15,0x11,0x00], 'F': [0x1f,0x14,0x14,0x10,0x00],
+  'G': [0x0e,0x11,0x15,0x07,0x00], 'H': [0x1f,0x04,0x04,0x1f,0x00], 'I': [0x11,0x1f,0x11,0x00,0x00],
+  'J': [0x02,0x11,0x1f,0x10,0x00], 'K': [0x1f,0x04,0x0a,0x11,0x00], 'L': [0x1f,0x01,0x01,0x01,0x00],
+  'M': [0x1f,0x08,0x04,0x08,0x1f], 'N': [0x1f,0x08,0x04,0x02,0x1f], 'O': [0x0e,0x11,0x11,0x0e,0x00],
+  'P': [0x1f,0x14,0x14,0x08,0x00], 'Q': [0x0e,0x11,0x13,0x0f,0x00], 'R': [0x1f,0x14,0x16,0x09,0x00],
+  'S': [0x09, 0x15, 0x15, 0x12, 0x00], 'T': [0x10,0x10,0x1f,0x10,0x10], 'U': [0x1f,0x01,0x01,0x1f,0x00],
+  'V': [0x1c,0x02,0x01,0x02,0x1c], 'W': [0x1f, 0x02, 0x04, 0x02, 0x1f], 'X': [0x11,0x0a,0x04,0x0a,0x11],
+  'Y': [0x10,0x08,0x07,0x08,0x10], 'Z': [0x11,0x13,0x15,0x19,0x11],
+  '0': [0x0e,0x11,0x11,0x0e,0x00],  
+  '1': [0x00, 0x08, 0x1f, 0x00, 0x00],
+  '2': [0x13,0x15,0x15,0x19,0x00],
+  '3': [0x11,0x15,0x15,0x1a,0x00],  
+  '4': [0x1c,0x04,0x04,0x1f,0x00],  
+  '5': [0x1d,0x15,0x15,0x13,0x00],  
+  '6': [0x1f,0x15,0x15,0x13,0x00],  
+  '7': [0x10,0x11,0x12,0x1c,0x00],  
+  '8': [0x1a,0x15,0x15,0x1a,0x00],
+  '9': [0x1d,0x15,0x15,0x1f,0x00],  
+  ' ': [0x00,0x00,0x00,0x00,0x00], '!': [0x00,0x1d,0x00,0x00,0x00],
+  '?': [0x10,0x15,0x14,0x08,0x00]
+};
+const EMPTY       = 0;
+const STONE       = 1;
+const WOOD      = 2;
+const SAND      = 3;
+const WATER     = 4;
+const OIL       = 5;
+const LAVA      = 6;
+const FIRE      = 7;
+const SMOKE     = 8;
+const STEAM     = 9;
+const ACID      = 10;
+const GUNPOWDER = 11;
+const TNT       = 12;
+const C4        = 13;
+const LASER     = 14;
+const BOMB      = 15;
+const HUMAN     = 16;
+const JUICE     = 17;
+const NUKE      = 18;
+const MULCH     = 19;
+const BRICK     = 20;
+const BONE      = 21;
+const PLANT     = 22;
+const SEED      = 23;
+const WIRE      = 24;
+const BATTERY   = 25;
+const SPARK     = 26;
+const LED_R     = 27;
+const LED_G     = 28;
+const LED_B     = 29;
+const SWITCH    = 30;
+const SOLAR     = 31;
+const REPEATER  = 32;
+const TESLA     = 33;
+const LIGHTNING = 34;
+const PETRIFIED_WOOD = 35;
+const PETROL = 36;
+const THERMITE       = 37;
+const CHEESE = 38;
+const TOTAL_ELEMENTS = 39;
+const ELEMENT_DEFS = [
+  { id: EMPTY, name: "Eraser", color: [0,0,0], showInUI: true },
+  { id: STONE, name: "Stone", color: [110,110,115], showInUI: true },
+  { id: BRICK, name: "Brick", color: [180,80,60], showInUI: true },
+  { id: WOOD, name: "Wood", color: [115,74,38], showInUI: true },
+  { id: BONE, name: "Bone", color: [230,225,210], showInUI: true },
+  { id: SAND, name: "Sand", color: [235,196,96], showInUI: true },
+  { id: MULCH, name: "Mulch", color: [100,65,40], showInUI: true },
+  { id: SEED, name: "Tree Seed", color: [139,195,74], showInUI: true },
+  { id: PLANT, name: "Plant", color: [46,184,114], showInUI: true },
+  { id: WATER, name: "Water", color: [46,134,222], showInUI: true },
+  { id: OIL, name: "Oil", color: [74,53,39], showInUI: true },
+  { id: LAVA, name: "Lava", color: [241,76,56], showInUI: true },
+  { id: FIRE, name: "Fire", color: [255,107,0], showInUI: true },
+  { id: SMOKE, name: "Smoke", color: [120,120,125], showInUI: true },
+  { id: STEAM, name: "Steam", color: [200,214,229], showInUI: true },
+  { id: ACID, name: "Acid", color: [46,204,113], showInUI: true },
+  { id: BATTERY, name: "Battery", color: [241,196,15], showInUI: true },
+  { id: WIRE, name: "Wire", color: [127,140,141], showInUI: true },
+  { id: SWITCH, name: "Switch (Off)", color: [70,50,50], showInUI: true },
+  { id: SOLAR, name: "Solar Panel", color: [41,128,185], showInUI: true },
+  { id: REPEATER, name: "Repeater", color: [142,68,173], showInUI: true },
+  { id: TESLA, name: "Tesla Coil", color: [211,84,0], showInUI: true },
+  { id: LED_R, name: "Red LED", color: [100,20,20], showInUI: true },
+  { id: LED_G, name: "Green LED", color: [20,100,20], showInUI: true },
+  { id: LED_B, name: "Blue LED", color: [20,20,100], showInUI: true },
+  { id: GUNPOWDER, name: "Gunpowder", color: [85,93,102], showInUI: true },
+  { id: TNT, name: "TNT Block", color: [231,76,60], showInUI: true },
+  { id: C4, name: "C4 Plastic", color: [149,165,166], showInUI: true },
+  { id: LASER, name: "Laser", color: [0,255,242], showInUI: true },
+  { id: BOMB, name: "Bomb", color: [155,89,182], showInUI: true },
+  { id: NUKE, name: "Nuke", color: [39,174,96], showInUI: true },
+  { id: LIGHTNING, name: "Lightning Bolt", color: [255, 255, 150], showInUI: true },
+  { id: PETRIFIED_WOOD, name: "Petrified Wood", color: [55, 55, 60], showInUI: false },
+  { id: HUMAN, name: "Human", color: [225,172,119], showInUI: true },
+  { id: SPARK, name: "Spark", color: [255,255,255], showInUI: false },
+  {id: PETROL, name: "Petrol",color: [26,102,153], showInUI: true},
+  { id: THERMITE, name: "Thermite", color: [140, 70, 55], showInUI: true },
+  { id: JUICE, name: "Raspberry Juice", color: [255,0,75], showInUI: false },
+  {
+    id: CHEESE,
+    name: "Cheddar Cheese",
+    color: [255, 165, 0], 
+    showInUI: true,
+  },
+];
+const HUMAN_SKIN_PALETTE = [[255,219,172],[241,194,125],[224,168,114],[198,134,66]];
+const HUMAN_CLOTH_PALETTE = [[231,76,60],[52,152,219],[46,204,113],[155,89,182],[241,196,15],[230,126,34]];
+const colorR = new Uint8Array(TOTAL_ELEMENTS);
+const colorG = new Uint8Array(TOTAL_ELEMENTS);
+const colorB = new Uint8Array(TOTAL_ELEMENTS);
+ELEMENT_DEFS.forEach(e=>{
+  colorR[e.id]=e.color[0];
+  colorG[e.id]=e.color[1];
+  colorB[e.id]=e.color[2];
+});
+const RAINBOW_PALETTE = [
+  [0, 212, 255],   
+  [50, 225, 110],  
+  [105, 48, 194], 
+  [217, 30, 154],  
+  [241, 196, 15]   
+];
+let grid = new Uint8Array(SIZE);
+let next = new Uint8Array(SIZE);
+let vx = new Float32Array(SIZE);
+let vy = new Float32Array(SIZE);
+let nextVx = new Float32Array(SIZE);
+let nextVy = new Float32Array(SIZE);
+let life = new Uint8Array(SIZE);
+let nextLife = new Uint8Array(SIZE);
+let flags = new Uint8Array(SIZE);
+let armed = new Uint16Array(SIZE);
+let humansList = [];
+document.getElementById('btn-pause').addEventListener('click', function() {
+  isPaused = !isPaused; 
+  if (isPaused) {
+    this.textContent = "Play";
+    this.style.background = "#27ae60"; 
+  } else {
+    this.textContent = "Pause";
+    this.style.background = ""; 
+  }
+});
+let lightningBolts = [];
+let isPaused = false;
+let currentElement = SAND;
+let brushSize = 4;
+let timeScale = 1.0; 
+let timeAccumulator = 0.0;
+let flashIntensity = 0; 
+let isLedPlacerActive = false; 
+let isDrawingBox = false;
+let boxStartX = 0, boxStartY = 0;
+let boxEndX = 0, boxEndY = 0;
+let lastLaserX = -1;
+let lastLaserY = -1;
+let framesCount = 0;
+let lastFpsUpdate = 0;
+let currentFps = 0;
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let isLaserPlaying = false;
+let laserOsc = null;
+let laserGain = null;
+let lastSizzletime = 0;
+let lastSplashtime = 0;
+function makeMaxDistortionCurve() {
+  const n_samples = 44100;
+  const curve = new Float32Array(n_samples);
+  for (let i = 0; i < n_samples; ++i) {
+    const x = (i * 2) / n_samples - 1;
+    curve[i] = x < 0 ? Math.max(-1, x * 15) : Math.min(1, x * 15);
+  }
+  return curve;
+}
+const maxDistortionCurve = makeMaxDistortionCurve();
+function generateNoiseBuffer(type, duration) {
+  const bufferSize = audioCtx.sampleRate * duration;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  let lastOut = 0.0;
+  for (let i = 0; i < bufferSize; i++) {
+    const white = Math.random() * 2 - 1;
+    if (type === 'brown') {
+      data[i] = (lastOut + (0.02 * white)) / 1.02;
+      lastOut = data[i];
+      data[i] *= 4.0;
+    } else {
+      data[i] = white;
+    }
+  }
+  return buffer;
+}
+function playEarthShatteringBlast(volume, duration, subPitch, lowpassCutoff, isNuke = false) {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+  const layers = isNuke ? 4 : 1;
+  const masterVolumeMultiplier = isNuke ? 12.0 : 2.5;
+  for (let l = 0; l < layers; l++) {
+    const masterAmp = audioCtx.createGain();
+    masterAmp.gain.setValueAtTime(volume * masterVolumeMultiplier, now);
+    masterAmp.connect(audioCtx.destination);
+    const rumble = audioCtx.createBufferSource();
+    rumble.buffer = generateNoiseBuffer('brown', duration);
+    const rumbleFilter = audioCtx.createBiquadFilter();
+    rumbleFilter.type = 'lowpass';
+    rumbleFilter.frequency.setValueAtTime(lowpassCutoff, now);
+    rumbleFilter.frequency.linearRampToValueAtTime(15, now + duration);
+    const rumbleGain = audioCtx.createGain();
+    rumbleGain.gain.setValueAtTime(2.0, now);
+    rumbleGain.gain.linearRampToValueAtTime(1.5, now + duration * 0.5);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    rumble.connect(rumbleFilter);
+    rumbleFilter.connect(rumbleGain);
+    rumbleGain.connect(masterAmp);
+    const blast = audioCtx.createBufferSource();
+    blast.buffer = generateNoiseBuffer('white', duration * 0.7);
+    const blastFilter = audioCtx.createBiquadFilter();
+    blastFilter.type = 'lowpass';
+    blastFilter.frequency.setValueAtTime(lowpassCutoff * (isNuke ? 1.5 : 2), now);
+    const clipper = audioCtx.createWaveShaper();
+    clipper.curve = maxDistortionCurve;
+    const blastGain = audioCtx.createGain();
+    blastGain.gain.setValueAtTime(1.5, now);
+    blastGain.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.7);
+    blast.connect(blastFilter);
+    blastFilter.connect(clipper);
+    clipper.connect(blastGain);
+    blastGain.connect(masterAmp);
+    const crack = audioCtx.createBufferSource();
+    crack.buffer = generateNoiseBuffer('white', isNuke ? 0.4 : 0.2);
+    const crackFilter = audioCtx.createBiquadFilter();
+    crackFilter.type = 'bandpass';
+    crackFilter.frequency.setValueAtTime(isNuke ? 120 : 250, now);
+    crackFilter.Q.setValueAtTime(3, now);
+    const crackGain = audioCtx.createGain();
+    crackGain.gain.setValueAtTime(3.0, now);
+    crackGain.gain.exponentialRampToValueAtTime(0.001, now + (isNuke ? 0.38 : 0.18));
+    crack.connect(crackFilter);
+    crackFilter.connect(crackGain);
+    crackGain.connect(masterAmp);
+    rumble.start(now);
+    blast.start(now);
+    crack.start(now);
+  }
+}
+async function packAllGridsToBase64() {
+  const hasNext = (typeof next !== 'undefined');
+  const nextLength = hasNext ? next.length : 0;
+  const totalLength = grid.length + nextLength + vx.length + vy.length + flags.length + life.length + armed.length;
+  const masterBuffer = new Uint8Array(totalLength);
+  let offset = 0;
+  masterBuffer.set(grid, offset);  offset += grid.length;
+  if (hasNext) {
+    masterBuffer.set(next, offset);
+    offset += next.length;
+  }
+  masterBuffer.set(vx, offset);    offset += vx.length;
+  masterBuffer.set(vy, offset);    offset += vy.length;
+  masterBuffer.set(flags, offset); offset += flags.length;
+  masterBuffer.set(life, offset);  offset += life.length;
+  masterBuffer.set(armed, offset);
+  const blob = new Blob([masterBuffer]);
+  const compressionStream = blob.stream().pipeThrough(new CompressionStream('deflate'));
+  const compressedBuffer = await new Response(compressionStream).arrayBuffer();
+  const compressedUint8 = new Uint8Array(compressedBuffer);
+  let binaryString = "";
+  const chunkSize = 0xffff; 
+  for (let i = 0; i < compressedUint8.length; i += chunkSize) {
+    binaryString += String.fromCharCode.apply(null, compressedUint8.subarray(i, i + chunkSize));
+  }
+  const mapsBase64 = btoa(binaryString);
+  const humansDataStr = btoa(JSON.stringify(humansList || []));
+  return `${mapsBase64}|${humansDataStr}`;
+}
+async function unpackBase64ToGrids(base64String) {
+  try {
+    const parts = base64String.split('|');
+    const mapsBase64 = parts[0];
+    const humansBase64 = parts[1];
+    const binaryString = atob(mapsBase64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    const blob = new Blob([bytes]);
+    const decompressionStream = blob.stream().pipeThrough(new DecompressionStream('deflate'));
+    const decompressedBuffer = await new Response(decompressionStream).arrayBuffer();
+    const masterBuffer = new Uint8Array(decompressedBuffer);
+    let offset = 0;
+    grid.set(masterBuffer.subarray(offset, offset + grid.length));   offset += grid.length;
+    if (typeof next !== 'undefined') {
+      next.set(masterBuffer.subarray(offset, offset + next.length));
+      offset += next.length;
+    }
+    vx.set(masterBuffer.subarray(offset, offset + vx.length));       offset += vx.length;
+    vy.set(masterBuffer.subarray(offset, offset + vy.length));       offset += vy.length;
+    flags.set(masterBuffer.subarray(offset, offset + flags.length)); offset += flags.length;
+    life.set(masterBuffer.subarray(offset, offset + life.length));   offset += life.length;
+    armed.set(masterBuffer.subarray(offset, offset + armed.length));
+    lightningBolts = [];
+    if (humansBase64) {
+      try {
+        humansList = JSON.parse(atob(humansBase64));
+      } catch (e) {
+        console.error("Failed to parse humans string data, resetting.", e);
+        humansList = [];
+      }
+    } else {
+      humansList = [];
+    }
+    if (typeof next !== 'undefined') next.set(grid);
+    return true;
+  } catch (err) {
+    console.error("Restoration broken:", err);
+    return false;
+  }
+}
+async function saveToSecretVault() {
+  const saveName = document.getElementById('vault-name').value.trim() || 'autosave';
+  const prefixKey = `pcps_vault_${saveName}`;
+  const rawBase64 = await packAllGridsToBase64();
+  localStorage.setItem(prefixKey, rawBase64);
+  updateVaultDropdown();
+  alert(`Map locked into vault as: "${saveName}"`);
+}
+async function loadFromSecretVault() {
+  const dropdown = document.getElementById('vault-select');
+  const selectedKey = dropdown.value;
+  if (!selectedKey) {
+    alert("Select a save slot first!");
+    return;
+  }
+  const rawBase64 = localStorage.getItem(selectedKey);
+  if (rawBase64) {
+    const success = await unpackBase64ToGrids(rawBase64);
+    if (success) alert("Vault map loaded perfectly!");
+    else alert("Corrupt vault data found.");
+  }
+}
+function updateVaultDropdown() {
+  const dropdown = document.getElementById('vault-select');
+  if (!dropdown) return;
+  dropdown.innerHTML = '<option value="">-- Select Save Slot --</option>';
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('pcps_vault_')) {
+      const cleanName = key.replace('pcps_vault_', '');
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = cleanName;
+      dropdown.appendChild(option);
+    }
+  }
+}
+function deleteFromSecretVault() {
+  const dropdown = document.getElementById('vault-select');
+  const selectedKey = dropdown.value;
+  if (!selectedKey) {
+    alert("Select a save slot to delete first!");
+    return;
+  }
+  const cleanName = selectedKey.replace('pcps_vault_', '');
+  if (confirm(`Are you sure you want to permanently delete "${cleanName}"?`)) {
+    localStorage.removeItem(selectedKey); 
+    updateVaultDropdown();               
+    alert(`"${cleanName}" has been removed from the vault.`);
+  }
+}
+document.addEventListener("DOMContentLoaded", updateVaultDropdown);
+function playExplosionSound(type) {
+  if (type === 'nuke') {
+    playEarthShatteringBlast(3.5, 8.0, 20, 150, true);
+  } 
+  else if (type === 'lightning') {
+    playEarthShatteringBlast(0.4, 2.5, 120, 900, false); 
+  } 
+  else if (type === 'c4') {
+    playEarthShatteringBlast(1.1, 1.5, 60, 700, false);
+  } 
+  else {
+    playEarthShatteringBlast(0.9, 3.0, 50, 300, false);
+  }
+}
+function startLaserSound() {
+  if (isLaserPlaying) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  isLaserPlaying = true;
+  const now = audioCtx.currentTime;
+  laserOsc = audioCtx.createOscillator();
+  laserGain = audioCtx.createGain();
+  laserOsc.type = 'sawtooth';
+  laserOsc.frequency.setValueAtTime(240, now);
+  const lfo = audioCtx.createOscillator();
+  const lfoGain = audioCtx.createGain();
+  lfo.type = 'sawtooth';
+  lfo.frequency.setValueAtTime(70, now); 
+  lfoGain.gain.setValueAtTime(100, now); 
+  lfo.connect(lfoGain);
+  lfoGain.connect(laserOsc.frequency);
+  laserGain.gain.setValueAtTime(0.15, now);
+  laserOsc.connect(laserGain);
+  laserGain.connect(audioCtx.destination);
+  lfo.start(now);
+  laserOsc.start(now);
+}
+let isLaserFiring = false;
+let lastLaserStartY = -1;
+function fireLaser(x, y) {
+  if (x < 0 || x >= W || y < 0 || y >= H) {
+    isLaserFiring = false;
+    return;
+  }
+  startLaserSound(); 
+  isLaserFiring = true;
+  lastLaserX = x;
+  lastLaserStartY = y;
+  const startingIdx = y * W + x;
+  const startingTarget = grid[startingIdx];
+  if (startingTarget === THERMITE) {
+      flags[startingIdx] = 1;  
+      life[startingIdx] = Math.floor(Math.random() * 60) + 140; 
+  }
+  let cy = y;
+  let iterationCount = 0;
+  while (cy < H) {
+    iterationCount++;
+    const idx = cy * W + x;
+    const target = grid[idx];
+    if (iterationCount <= 10 || cy === H - 1) {
+    }
+    if (target === CHEESE) {
+      break;
+    }
+    if (target === STONE || target === BRICK || target === PETRIFIED_WOOD) {
+      if (Math.random() < 0.25) {
+        grid[idx] = SPARK;
+        life[idx] = 4;
+      }
+      break; 
+    }
+    if (target === TNT || target === C4 || target === NUKE || target === GUNPOWDER) {
+      let radius = target === NUKE ? 80 : (target === C4 ? 28 : 18);
+      let type = target === NUKE ? "nuke" : (target === C4 ? "c4" : "normal");
+      triggerExplosion(x, cy, radius, type);
+      break;
+    }
+    if (target === PETROL) {
+      triggerExplosion(x, cy, 14, "normal");
+      break;
+    }
+    if (target === OIL) {
+      grid[idx] = FIRE;
+      life[idx] = Math.floor(Math.random() * 80) + 60;
+    } else if (target !== EMPTY && target !== FIRE) {
+      grid[idx] = FIRE;
+      life[idx] = 30;
+    } else {
+      grid[idx] = FIRE;
+    }
+    for (let sideOffset = -1; sideOffset <= 1; sideOffset++) {
+      let sideX = x + sideOffset;
+      if (sideX >= 0 && sideX < W) {
+        let sideIdx = cy * W + sideX;
+        let sideTarget = grid[sideIdx];
+        if (sideTarget !== CHEESE && sideTarget !== STONE && sideTarget !== BRICK && sideTarget !== PETRIFIED_WOOD) {
+          if (sideTarget !== EMPTY && Math.random() < 0.7) {
+            grid[sideIdx] = FIRE;
+            life[sideIdx] = Math.floor(Math.random() * 15) + 5;
+          }
+        }
+      }
+    }
+    cy++;
+  }
+  lastLaserY = cy; 
+  if (isLaserFiring && lastLaserX !== -1) {
+    const scale = 4; 
+    const renderX = lastLaserX * (canvas.width / W);
+    const startY = lastLaserStartY * (canvas.height / H);
+    const endY = lastLaserY * (canvas.height / H);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(renderX, startY);
+    ctx.lineTo(renderX, endY);
+    ctx.strokeStyle = "rgba(0, 242, 255, 0.65)"; 
+    ctx.lineWidth = 5;                           
+    ctx.shadowBlur = 10;                         
+    ctx.shadowColor = "rgb(0, 242, 255)";
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(renderX, startY);
+    ctx.lineTo(renderX, endY);
+    ctx.strokeStyle = "rgba(200, 255, 255, 1)";
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 0;                          
+    ctx.stroke();
+    ctx.restore();
+    isLaserFiring = false;
+  }
+}
+function stopLaserSound() {
+  if (!isLaserPlaying) return;
+  isLaserPlaying = false;
+  if (laserOsc) {
+    try { laserOsc.stop(); laserOsc.disconnect(); } catch(e) {}
+  }
+  laserOsc = null;
+  laserGain = null;
+}
+function playSizzleSound() {
+  const now = performance.now();
+  if (now - lastSizzletime < 120) return; 
+  lastSizzletime = now;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const ctxNow = audioCtx.currentTime;
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = generateNoiseBuffer('white', 0.08);
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'highpass';
+  filter.frequency.setValueAtTime(8000, ctxNow);
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.04, ctxNow);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctxNow + 0.08);
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(audioCtx.destination);
+  noise.start(ctxNow);
+}
+function playSplashSound() {
+  const now = performance.now();
+  if (now - lastSplashtime < 100) return;
+  lastSplashtime = now;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const ctxNow = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(450, ctxNow);
+  osc.frequency.exponentialRampToValueAtTime(90, ctxNow + 0.18);
+  gain.gain.setValueAtTime(0.15, ctxNow);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctxNow + 0.18);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(ctxNow);
+  osc.stop(ctxNow + 0.18);
+}
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const img = ctx.createImageData(W,H);
+const buf = new Uint32Array(img.data.buffer);
+const fpsDisplay = document.getElementById("fps-display");
+const particleDisplay = document.getElementById("particle-display");
+const brushSizeInput = document.getElementById("brush-size");
+const brushValDisplay = document.getElementById("brush-val");
+const speedInput = document.getElementById("game-speed");
+const speedValDisplay = document.getElementById("speed-val");
+const btnPause = document.getElementById("btn-pause");
+const btnClear = document.getElementById("btn-clear");
+const uiGrid = document.getElementById("element-ui-grid");
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  brushSize = e.deltaY < 0 ? Math.min(25, brushSize + 1) : Math.max(1, brushSize - 1);
+  brushSizeInput.value = brushSize;
+  brushValDisplay.textContent = brushSize;
+}, { passive: false });
+for(let i=0; i<SIZE; i++){
+  flags[i] = 0;
+}
+function selectElement(id){
+  currentElement=id;
+  ELEMENT_DEFS.forEach(d=>{
+    const b=document.getElementById(`elem-${d.id}`);
+    if(b) b.classList.toggle("active", d.id===id);
+  });
+}
+function triggerExplosion(cx, cy, radius, typeString = "normal") {
+  const isC4 = typeString === "c4";
+  const isNuke = typeString === "nuke";
+  playExplosionSound(typeString);
+  let forceMultiplier = 10;
+  if (isC4) forceMultiplier = 16;
+  if (isNuke) {
+    forceMultiplier = 120;
+    flashIntensity = 1.0;
+  }
+  const rSq = radius * radius;
+  humansList.forEach(h => {
+    const dx = (h.x + 1) - cx;
+    const dy = (h.y + 2) - cy;
+    if (dx * dx + dy * dy <= rSq) h.health -= isNuke ? 5000 : 20; 
+  });
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const distSq = dx * dx + dy * dy;
+      if (distSq > rSq) continue;
+      const nx = cx + dx, ny = cy + dy;
+      if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+      const i = ny * W + nx;
+	  if (grid[i] === CHEESE) {
+      continue; 
+    }
+      if (!isNuke && (grid[i] === STONE || grid[i] === BRICK || grid[i] === PETRIFIED_WOOD) && Math.random() > 0.15) continue;
+      const dist = Math.sqrt(distSq || 1);
+      const falloff = (1 - dist / radius);
+      flags[i] = 0; 
+      if (isNuke && dist < radius * 1.0) {
+        grid[i] = FIRE; next[i] = FIRE;
+        life[i] = Math.floor(Math.random() * 150) + 120; nextLife[i] = life[i];
+        vx[i] = (dx / dist) * falloff * forceMultiplier + (Math.random() - 0.5) * 20;
+        vy[i] = (dy / dist) * falloff * forceMultiplier - Math.random() * 15;
+        continue;
+      }
+      if (Math.random() < 0.65) {
+        grid[i] = FIRE; next[i] = FIRE;
+        life[i] = Math.floor(Math.random() * 80) + 60; nextLife[i] = life[i];
+        vx[i] = (dx / dist) * falloff * forceMultiplier + (Math.random() - 0.5) * 4;
+        vy[i] = (dy / dist) * falloff * forceMultiplier - Math.random() * 3;
+      } else if (Math.random() < 0.95) {
+        grid[i] = SMOKE; next[i] = SMOKE;
+        life[i] = Math.floor(Math.random() * 120) + 90; nextLife[i] = life[i];
+        vx[i] = (dx / dist) * falloff * forceMultiplier * 0.6;
+        vy[i] = (dy / dist) * falloff * forceMultiplier * 0.6 - 1;
+      } else {
+        grid[i] = EMPTY; next[i] = EMPTY;
+        vx[i] = 0; vy[i] = 0;
+      }
+    }
+  }
+}
+function fireLightning(startX, startY) {
+  playExplosionSound('lightning');
+  flashIntensity = 0.5;
+  function generateBranch(cx, cy, isSubBranch = false) {
+    let pts = [{x: cx, y: cy}];
+    while (cy < H - 8) {
+      let steps = Math.floor(Math.random() * 6) + 4;
+      cy += steps;
+      cx += (Math.random() * 16 - 8) | 0;
+      cx = Math.max(0, Math.min(W - 1, cx));
+      pts.push({x: cx, y: cy});
+      let idx = cy * W + cx;
+if (grid[idx] !== EMPTY && grid[idx] !== HUMAN) {
+  if (grid[idx] === TNT || grid[idx] === C4 || grid[idx] === NUKE || grid[idx] === GUNPOWDER) {
+    break; 
+  }
+  if (grid[idx] === WOOD) {
+    grid[idx] = PETRIFIED_WOOD;
+    next[idx] = PETRIFIED_WOOD;
+    vx[idx] = 0;
+    vy[idx] = 0;
+    flags[idx] = Math.floor(Math.random() * 25) - 12; 
+  } else if (Math.random() < 0.4) {
+    grid[idx] = FIRE;
+    life[idx] = 40;
+  }
+}
+      if (!isSubBranch && Math.random() < 0.12) {
+        let forkX = cx + ((Math.random() * 24 - 12) | 0);
+        generateBranch(forkX, cy, true);
+      }
+    }
+    lightningBolts.push({ path: pts, timer: 24 });
+    let endPt = pts[pts.length - 1];
+    triggerExplosion(endPt.x, endPt.y, 14, "normal");
+    for (let dy = -15; dy <= 15; dy++) {
+      for (let dx = -15; dx <= 15; dx++) {
+        let tx = endPt.x + dx;
+        let ty = endPt.y + dy;
+        if (tx >= 0 && tx < W && ty >= 0 && ty < H) {
+          let i = ty * W + tx;
+          if (grid[i] === WIRE || grid[i] === LED_R || grid[i] === LED_G || grid[i] === LED_B || grid[i] === WATER || grid[i] === TESLA) {
+            next[i] = SPARK;
+            nextLife[i] = 6;
+          }
+        }
+      }
+    }
+    humansList.forEach(h => {
+      let hdx = h.x - endPt.x;
+      let hdy = h.y - endPt.y;
+      if (hdx * hdx + hdy * hdy < 625) { 
+        h.health -= 150;
+      }
+    });
+  }
+  generateBranch(startX, startY, false);
+}
+let isDrawing = false;
+function drawBrushCoordinates(x, y) {
+  const r = brushSize;
+  const rSq = r * r;
+  if (currentElement === LASER) { fireLaser(x, y); return; }
+  if (currentElement === LIGHTNING) {
+    if (!window.lightningFiredThisClick) {
+      fireLightning(x, y);
+      window.lightningFiredThisClick = true; 
+    }
+    return;
+  }
+  if (currentElement === SWITCH && !isDrawing) {
+    const idx = y * W + x;
+    if (grid[idx] === SWITCH) {
+      flags[idx] = flags[idx] === 1 ? 0 : 1;
+      return;
+    }
+  }
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      if (dx * dx + dy * dy > rSq) continue;
+      const nx = x + dx; const ny = y + dy;
+      if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+      const i = ny * W + nx;
+      if (currentElement === HUMAN) {
+        if (Math.random() < 0.05 && checkSpaceClear(nx, ny, -1)) {
+          humansList.push({
+            id: Math.random(), x: nx, y: ny, health: 12, 
+            skinColor: HUMAN_SKIN_PALETTE[(Math.random() * HUMAN_SKIN_PALETTE.length) | 0],
+            clothColor: HUMAN_CLOTH_PALETTE[(Math.random() * HUMAN_CLOTH_PALETTE.length) | 0],
+            walkDir: Math.random() < 0.5 ? -1 : 1
+          });
+        }
+      } else {
+        if (currentElement === EMPTY) {
+          humansList = humansList.filter(h => !(h.x >= nx - 1 && h.x <= nx + 1 && h.y >= ny - 3 && h.y <= ny + 1));
+        }
+        grid[i] = currentElement; next[i] = currentElement;
+        life[i] = (currentElement === FIRE) ? 70 : (currentElement === SMOKE ? 100 : 0);
+        nextLife[i] = life[i];
+        vx[i] = 0; vy[i] = 0; armed[i] = 0;
+        if(currentElement === SWITCH) flags[i] = 0; 
+      }
+    }
+  }
+}
+function originalSelectElement(id) {
+  if (isLedPlacerActive) {
+    isLedPlacerActive = false;
+    btnToggleLed.textContent = "Mode: Painting elements";
+    btnToggleLed.style.backgroundColor = "#2c3e50";
+    ledToolOptions.style.display = "none";
+    isDrawingBox = false;
+  }
+  currentElement = id;
+  ELEMENT_DEFS.forEach(d => {
+    const b = document.getElementById(`elem-${d.id}`);
+    if(b) b.classList.toggle("active", d.id===id);
+  });
+}
+selectElement = originalSelectElement;
+function handleMouseOrTouchPosition(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((clientX - rect.left) * (W / rect.width));
+  const y = Math.floor((clientY - rect.top) * (H / rect.height));
+  drawBrushCoordinates(x, y);
+}
+function getCanvasMousePos(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((clientX - rect.left) * (W / rect.width));
+  const y = Math.floor((clientY - rect.top) * (H / rect.height));
+  return { x: Math.max(0, Math.min(W - 1, x)), y: Math.max(0, Math.min(H - 1, y)) };
+}
+canvas.addEventListener("mousedown", e => {
+  if (e.button === 0) {
+    const textVal = document.getElementById("led-text-input").value;
+    const pos = getCanvasMousePos(e.clientX, e.clientY);
+    if (textVal.trim() !== "") {
+      isDrawingBox = true;
+      boxStartX = pos.x;
+      boxStartY = pos.y;
+      boxEndX = pos.x;
+      boxEndY = pos.y;
+    } else {
+      isDrawing = true;
+      window.lightningFiredThisClick = false;
+      handleMouseOrTouchPosition(e.clientX, e.clientY);
+    }
+  }
+});
+window.addEventListener("mousemove", e => {
+  const pos = getCanvasMousePos(e.clientX, e.clientY);
+  if (isDrawingBox) {
+    boxEndX = pos.x;
+    boxEndY = pos.y;
+  } else if (isDrawing) {
+    handleMouseOrTouchPosition(e.clientX, e.clientY);
+  }
+});
+window.addEventListener("mouseup", () => {
+  if (isDrawingBox) {
+    isDrawingBox = false;
+    generateLEDMatrixInBox();
+  }
+  isDrawing = false;
+  window.lightningFiredThisClick = false;
+  stopLaserSound();
+});
+canvas.addEventListener("touchstart", e => {
+  e.preventDefault();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  if (e.touches.length > 0) {
+    isDrawing = true;
+    window.lightningFiredThisClick = false; 
+    handleMouseOrTouchPosition(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: false });
+canvas.addEventListener("touchmove", e => { e.preventDefault(); if (isDrawing && e.touches.length > 0) handleMouseOrTouchPosition(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+window.addEventListener("touchend", e => {
+  if (e.touches.length === 0) {
+    isDrawing = false;
+    lastLaserX = -1;
+    lastLaserY = -1;
+    window.lightningFiredThisClick = false; 
+    stopLaserSound();
+  }
+});
+function generateLEDMatrixInBox() {
+  const str = document.getElementById("led-text-input").value.toUpperCase();
+  if (!str.trim()) return;
+  const colorSel = document.getElementById("led-text-color").value;
+  let targetType = LED_R;
+  if(colorSel === "green") targetType = LED_G;
+  if(colorSel === "blue") targetType = LED_B;
+  const x1 = Math.min(boxStartX, boxEndX);
+  const x2 = Math.max(boxStartX, boxEndX);
+  const y1 = Math.min(boxStartY, boxEndY);
+  const y2 = Math.max(boxStartY, boxEndY);
+  const boxW = x2 - x1;
+  const boxH = y2 - y1;
+  if (boxW < 4 || boxH < 4) return; 
+  let totalGlyphCols = 0;
+  for (let i = 0; i < str.length; i++) {
+    const glyph = FONT[str[i]] || FONT['?'];
+    totalGlyphCols += glyph.length + 2; 
+  }
+  if (totalGlyphCols > 0) totalGlyphCols -= 2; 
+  const scaleX = Math.max(1, Math.floor(boxW / totalGlyphCols));
+  const scaleY = Math.max(1, Math.floor(boxH / 5));
+  const scale = Math.min(scaleX, scaleY); 
+  let startX = x1;
+  let startY = y1;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    const glyph = FONT[char] || FONT['?'];
+    if (startX + (glyph.length * scale) > W) break; 
+    for (let col = 0; col < glyph.length; col++) {
+      let byte = glyph[col];
+      for (let row = 0; row < 5; row++) {
+        if ((byte >> row) & 1) {
+          for (let sy = 0; sy < scale; sy++) {
+            for (let sx = 0; sx < scale; sx++) {
+              let px = startX + (col * scale) + sx;
+              let py = startY + ((4 - row) * scale) + sy;
+              if (px >= x1 && px <= x2 && py >= y1 && py <= y2) {
+                let idx = py * W + px;
+                grid[idx] = targetType;
+                next[idx] = targetType;
+                flags[idx] = targetType;
+                life[idx] = 0;
+              }
+            }
+          }
+        }
+      }
+    }
+    startX += (glyph.length + 2) * scale;
+  }
+  document.getElementById("led-text-input").value = "";
+}
+brushSizeInput.addEventListener("input", e => { brushSize = parseInt(e.target.value, 10); brushValDisplay.textContent = brushSize; });
+speedInput.addEventListener("input", e => { timeScale = parseFloat(e.target.value); speedValDisplay.textContent = timeScale.toFixed(2) + "x"; });
+btnPause.addEventListener("click", togglePause);
+btnClear.addEventListener("click", clearWorld);
+function togglePause() { isPaused = !isPaused; btnPause.textContent = isPaused ? "Resume" : "Pause"; stopLaserSound(); }
+function clearWorld() { grid.fill(0); next.fill(0); life.fill(0); nextLife.fill(0); vx.fill(0); vy.fill(0); armed.fill(0); humansList = []; flashIntensity = 0; lastLaserX = -1; lastLaserY = -1; stopLaserSound(); }
+function swap(i1, i2) {
+  const tT = next[i1]; const tL = nextLife[i1]; const tVx = nextVx[i1]; const tVy = nextVy[i1]; const tArm = armed[i1];
+  next[i1] = next[i2]; nextLife[i1] = nextLife[i2]; nextVx[i1] = nextVx[i2]; nextVy[i1] = nextVy[i2]; armed[i1] = armed[i2];
+  next[i2] = tT; nextLife[i2] = tL; nextVx[i2] = tVx; nextVy[i2] = tVy; armed[i2] = tArm;
+}
+function checkSpaceClear(tx, ty, currentHumanId) {
+  for (let dy = 0; dy < 4; dy++) {
+    for (let dx = 0; dx < 2; dx++) {
+      const x = tx + dx; const y = ty + dy;
+      if (x < 0 || x >= W || y < 0 || y >= H) return false;
+      const t = grid[y * W + x];
+      if (t === HUMAN) {
+        let insideSelf = false;
+        for (let k = 0; k < humansList.length; k++) {
+          let h = humansList[k];
+          if (h.id === currentHumanId && x >= h.x && x <= h.x + 1 && y >= h.y && y <= h.y + 3) insideSelf = true;
+        }
+        if (!insideSelf) return false;
+      } else if (t !== EMPTY && t !== WATER && t !== OIL && t !== JUICE) return false;
+    }
+  }
+  return true;
+}
+function triggerGunpowderFlash(cx, cy) {
+  playSizzleSound();
+  const r = 8;
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      if (dx * dx + dy * dy > 64) continue;
+      const x = cx + dx; const y = cy + dy;
+      if (x < 0 || x >= W || y < 0 || y >= H) continue;
+      const i = y * W + x;
+      if (grid[i] === GUNPOWDER || grid[i] === EMPTY) {
+        if (Math.random() < 0.55) {
+          next[i] = FIRE; nextLife[i] = (Math.random() * 30 + 30) | 0;
+          nextVx[i] = (Math.random() - 0.5) * 5; nextVy[i] = -Math.random() * 4 - 1;
+        } else {
+          next[i] = SMOKE; nextLife[i] = (Math.random() * 50 + 40) | 0;
+          nextVx[i] = (Math.random() - 0.5) * 2; nextVy[i] = -Math.random() * 2;
+        }
+      }
+    }
+  }
+}
+function triggerImmediateReactions(x, y, i, type) {
+  const offsets = [1, -1, W, -W];
+  if (type === SPARK) {
+    for (let u = 0; u < 4; u++) {
+      const ni = i + offsets[u];
+      if (ni < 0 || ni >= SIZE) continue;
+      const nt = grid[ni];
+      if (nt === WIRE || nt === LED_R || nt === LED_G || nt === LED_B || nt === REPEATER || nt === TESLA) {
+        next[ni] = SPARK; nextLife[ni] = 4;
+      } else if (nt === SWITCH) {
+        if(flags[ni] === 1) { next[ni] = SPARK; nextLife[ni] = 4; }
+      } else if (nt === WATER || nt === JUICE) {
+        if (Math.random() < 0.15) { next[ni] = SPARK; nextLife[ni] = 2; }
+      } else if (nt === TNT || nt === C4 || nt === NUKE || nt === GUNPOWDER) {
+        if (nt === TNT || nt === C4) triggerExplosion(ni % W, Math.floor(ni / W), nt === C4 ? 40 : 25, nt === C4 ? "c4" : "normal");
+        if (nt === NUKE) triggerExplosion(ni % W, Math.floor(ni / W), 95, "nuke");
+        if (nt === GUNPOWDER) triggerGunpowderFlash(ni % W, Math.floor(ni / W));
+        return true;
+      }
+    }
+  }
+  for (let u = 0; u < 4; u++) {
+    const ni = i + offsets[u];
+    if (ni < 0 || ni >= SIZE) continue;
+    const nt = grid[ni];
+    if (nt === EMPTY) continue;
+    if ((type === WATER && nt === LAVA) || (type === LAVA && nt === WATER) || (type === JUICE && nt === LAVA) || (type === LAVA && nt === JUICE)) {
+      playSizzleSound();
+      next[i] = STONE; next[ni] = STEAM; nextLife[ni] = 60;
+      nextVx[ni] = (Math.random() - 0.5) * 4; nextVy[ni] = -Math.random() * 3 - 2;
+      return true;
+    }
+    if ((type === FIRE || type === LAVA) && (nt === TNT || nt === C4)) { triggerExplosion(ni % W, Math.floor(ni / W), nt === C4 ? 40 : 25, nt === C4 ? "c4" : "normal"); return true; }
+    if ((type === FIRE || type === LAVA) && nt === NUKE) { triggerExplosion(ni % W, Math.floor(ni / W), 95, "nuke"); return true; }
+    if ((type === FIRE || type === LAVA) && nt === GUNPOWDER) { triggerGunpowderFlash(ni % W, Math.floor(ni / W)); return true; }
+    if (type === LAVA) {
+      if (nt === MULCH || nt === PLANT || nt === SEED) { next[ni] = FIRE; nextLife[ni] = 60; } 
+      else if (nt === BONE && Math.random() < 0.1) { next[ni] = LAVA; }
+    }
+    if (type === FIRE) {
+      if (nt === MULCH && Math.random() < 0.1) { next[ni] = FIRE; nextLife[ni] = 90; }
+      if ((nt === PLANT || nt === SEED) && Math.random() < 0.3) { next[ni] = FIRE; nextLife[ni] = 40; }
+    }
+    if (type === ACID && nt !== STONE && nt !== BRICK && nt !== ACID && nt !== HUMAN && nt !== CHEESE) {
+      if (Math.random() < 0.35) {
+        playSizzleSound();
+        next[ni] = Math.random() < 0.4 ? SMOKE : EMPTY; next[i] = EMPTY;
+        if (next[ni] === SMOKE) nextLife[ni] = 30;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+function processPixel(x, y) {
+  const i = y * W + x;
+  const t = grid[i];
+  if (t === EMPTY || t === HUMAN) return;
+  if (t !== STONE && t !== BRICK && t !== BONE && t !== STEAM && t !== SMOKE && t !== WIRE && t !== BATTERY && t !== LED_R && t !== LED_G && t !== LED_B && t !== SWITCH && t !== SOLAR && t !== REPEATER && t !== TESLA) {
+    if (triggerImmediateReactions(x, y, i, t)) return;
+  }
+  const b = i + W;
+  const offsets = [1, -1, W, -W];
+  switch (t) {
+    case BRICK:
+    case BONE:
+    case WIRE:
+    case LED_R:
+    case LED_G:
+    case LED_B:
+      break;
+    case WATER:
+    case JUICE:
+    case OIL:
+    case ACID:
+    case PETROL: {
+      if (y >= H - 1) return;
+      let moved = false;
+      let bIdx = (y + 1) * W + x;
+      let targetUnder = grid[bIdx];
+      let canSwapUnder = false;
+      if (t === PETROL || t === OIL) {
+        canSwapUnder = (targetUnder === EMPTY || targetUnder === WATER || targetUnder === JUICE || targetUnder === ACID);
+      } else if (t === WATER || t === JUICE) {
+        canSwapUnder = (targetUnder === EMPTY || targetUnder === OIL || targetUnder === PETROL);
+      } else { 
+        canSwapUnder = (targetUnder === EMPTY);
+      }
+      if (canSwapUnder) {
+        if (targetUnder === EMPTY) swap(i, bIdx);
+        else swap(i, bIdx); 
+        moved = true;
+      } 
+      else {
+        let leftDir = Math.random() < 0.5 ? -1 : 1;
+        let dSide1 = bIdx + leftDir;
+        let dSide2 = bIdx - leftDir;
+        if (x + leftDir >= 0 && x + leftDir < W && grid[dSide1] === EMPTY) {
+          swap(i, dSide1);
+          moved = true;
+        } else if (x - leftDir >= 0 && x - leftDir < W && grid[dSide2] === EMPTY) {
+          swap(i, dSide2);
+          moved = true;
+        }
+      }
+      if (!moved) {
+        let flowDir = Math.random() < 0.5 ? -1 : 1;
+        let sideIdx1 = i + flowDir;
+        let sideIdx2 = i - flowDir;
+        if (flowDir === 1 && x < W - 1 && grid[sideIdx1] === EMPTY) {
+          swap(i, sideIdx1);
+          moved = true;
+        } else if (flowDir === -1 && x > 0 && grid[sideIdx1] === EMPTY) {
+          swap(i, sideIdx1);
+          moved = true;
+        } else if (flowDir === 1 && x > 0 && grid[sideIdx2] === EMPTY) {
+          swap(i, sideIdx2);
+          moved = true;
+        } else if (flowDir === -1 && x < W - 1 && grid[sideIdx2] === EMPTY) {
+          swap(i, sideIdx2);
+          moved = true;
+        }
+      }
+      if (t === PETROL && !moved && Math.random() < 0.002) {
+        next[i] = (typeof SMOKE !== 'undefined') ? SMOKE : SMOKE;
+        nextLife[i] = 45;
+      }
+      break;
+    }
+    case BATTERY:
+      for (let u = 0; u < 4; u++) {
+        const ni = i + offsets[u];
+        if (ni >= 0 && ni < SIZE && (grid[ni] === WIRE || grid[ni] === LED_R || grid[ni] === LED_G || grid[ni] === LED_B || grid[ni] === REPEATER || grid[ni] === TESLA)) {
+          next[ni] = SPARK; nextLife[ni] = 4;
+        } else if (ni >= 0 && ni < SIZE && grid[ni] === SWITCH && flags[ni] === 1) {
+          next[ni] = SPARK; nextLife[ni] = 4;
+        }
+      }
+      break;
+    case SWITCH:
+      if (flags[i] === 1) {
+        for (let u = 0; u < 4; u++) {
+          const ni = i + offsets[u];
+          if (ni >= 0 && ni < SIZE && (grid[ni] === WIRE || grid[ni] === LED_R || grid[ni] === LED_G || grid[ni] === LED_B || grid[ni] === REPEATER || grid[ni] === TESLA)) {
+            next[ni] = SPARK; nextLife[ni] = 4;
+          }
+        }
+      }
+      break;
+    case SOLAR:
+      let lightFound = false;
+      for (let u = 0; u < 4; u++) {
+        const ni = i + offsets[u];
+        if (ni >= 0 && ni < SIZE && (grid[ni] === FIRE || grid[ni] === LAVA || grid[ni] === STEAM || grid[ni] === SPARK)) {
+          lightFound = true; break;
+        }
+      }
+      if (lightFound || (lastLaserX === x && y >= lastLaserY)) {
+        for (let u = 0; u < 4; u++) {
+          const ni = i + offsets[u];
+          if (ni >= 0 && ni < SIZE && grid[ni] === WIRE) {
+            next[ni] = SPARK; nextLife[ni] = 4;
+          }
+        }
+      }
+      break;
+    case REPEATER:
+      if (x < W - 1 && (grid[i - 1] === SPARK || grid[i - W] === SPARK)) {
+        if (grid[i + 1] === WIRE || grid[i + 1] === LED_R || grid[i + 1] === LED_G || grid[i + 1] === LED_B) {
+          next[i + 1] = SPARK; nextLife[i + 1] = 4;
+        }
+        if (grid[i + W] === WIRE || grid[i + W] === LED_R || grid[i + W] === LED_G || grid[i + W] === LED_B) {
+          next[i + W] = SPARK; nextLife[i + W] = 4;
+        }
+      }
+      break;
+    case TESLA:
+      if (grid[i - 1] === SPARK || grid[i + 1] === SPARK || grid[i - W] === SPARK || grid[i + W] === SPARK) {
+        if (Math.random() < 0.12) {
+          let tx = x + Math.floor(Math.random() * 11 - 5);
+          let ty = y + Math.floor(Math.random() * 11 - 5);
+          if (tx >= 0 && tx < W && ty >= 0 && ty < H) {
+            let targetIdx = ty * W + tx;
+            if (grid[targetIdx] === EMPTY || grid[targetIdx] === WATER || grid[targetIdx] === WIRE) {
+              next[targetIdx] = SPARK; nextLife[targetIdx] = 6;
+              playSizzleSound();
+            }
+          }
+        }
+      }
+      break;
+    case SPARK:
+      if (life[i] <= 0) {
+        const originalType = flags[i];
+        if (originalType === LED_R || originalType === LED_G || originalType === LED_B || originalType === WIRE || originalType === SWITCH || originalType === REPEATER || originalType === TESLA) {
+          next[i] = originalType;
+        } else {
+          next[i] = WIRE;
+        }
+        return;
+      }
+      nextLife[i] = life[i] - 1;
+      break;
+    case SEED:
+      if (y < H - 1) {
+        const below = grid[b];
+        if (below === WATER || below === JUICE || grid[i-1] === WATER || grid[i+1] === WATER || grid[i-W] === WATER) {
+          playSizzleSound();
+          grid[i] = WOOD; next[i] = WOOD;
+          let height = Math.floor(Math.random() * 15) + 10;
+          let currentY = y;
+          let currentX = x;
+          for (let hIndex = 0; hIndex < height; hIndex++) {
+            currentY--;
+            if (currentY < 5) break;
+            if (Math.random() < 0.15) currentX += Math.random() < 0.5 ? -1 : 1;
+            if (currentX < 0 || currentX >= W) break;
+            let woodIdx = currentY * W + currentX;
+            grid[woodIdx] = WOOD; next[woodIdx] = WOOD;
+            if (hIndex > height - 5) {
+              const leafOffsets = [-1, 1, -W, W, -W-1, -W+1];
+              leafOffsets.forEach(lo => {
+                let li = woodIdx + lo;
+                if (li >= 0 && li < SIZE && grid[li] === EMPTY) {
+                  grid[li] = PLANT; next[li] = PLANT;
+                }
+              });
+            }
+          }
+          return;
+        }
+      }
+      if (y >= H - 1) return;
+      if (grid[b] === EMPTY || grid[b] === THERMITE || grid[b] === WATER || grid[b] === OIL || grid[b] === JUICE || grid[b] === PETROL) { swap(i, b); return; }
+      let sdDir = Math.random() < 0.5 ? -1 : 1;
+      if (x + sdDir >= 0 && x + sdDir < W && (grid[b + sdDir] === EMPTY)) swap(i, b + sdDir);
+      break;
+    case PLANT:
+      const plantNeighbors = [i - 1, i + 1, i - W, i + W];
+      for (let n = 0; n < 4; n++) {
+        let nIndex = plantNeighbors[n];
+        if (nIndex >= 0 && nIndex < SIZE && (grid[nIndex] === WATER || grid[nIndex] === JUICE)) {
+          playSizzleSound(); next[nIndex] = PLANT; 
+        }
+      }
+      break;
+    case MULCH:
+      if (y >= H - 1) return;
+      if (grid[b] === EMPTY || grid[b] === THERMITE || grid[b] === WATER || grid[b] === OIL || grid[b] === JUICE || grid[b] === PETROL) { swap(i, b); return; }
+      let md = Math.random() < 0.5 ? -1 : 1;
+      if (x + md >= 0 && x + md < W && (grid[b + md] === EMPTY)) swap(i, b + md);
+      break;
+    case SAND:
+      if (y >= H - 1) return;
+      const targetUnderSand = grid[b];
+      if (targetUnderSand === EMPTY || targetUnderSand === WATER || targetUnderSand === OIL || targetUnderSand === ACID || targetUnderSand === JUICE || targetUnderSand === PETROL) { 
+        if (targetUnderSand === WATER || targetUnderSand === JUICE) playSplashSound();
+        swap(i, b); return; 
+      }
+      let sd = Math.random() < 0.5 ? -1 : 1;
+      if (x + sd >= 0 && x + sd < W) {
+        const sideTarget = grid[b + sd];
+        if (sideTarget === EMPTY || sideTarget === WATER || sideTarget === OIL || sideTarget === ACID || sideTarget === JUICE || sideTarget === PETROL) {
+          if (sideTarget === WATER || sideTarget === JUICE) playSplashSound();
+          swap(i, b + sd);
+        }
+      }
+      break;
+	  case THERMITE: {
+      if (y >= H - 1) return;
+      const targetUnderThermite = grid[b];
+      if (targetUnderThermite === EMPTY || targetUnderThermite === WATER || targetUnderThermite === OIL || targetUnderThermite === ACID || targetUnderThermite === JUICE || targetUnderThermite === PETROL) { 
+        swap(i, b); 
+        return; 
+      }
+      let sd = Math.random() < 0.5 ? -1 : 1;
+      if (x + sd >= 0 && x + sd < W) {
+        const sideTarget = grid[b + sd];
+        if (sideTarget === EMPTY || sideTarget === WATER || sideTarget === OIL || sideTarget === ACID || sideTarget === JUICE || sideTarget === PETROL) {
+          swap(i, b + sd);
+          return;
+        }
+      }
+      if (flags[i] === 0) {
+        const thermiteNeighbors = [i - 1, i + 1, i - W, i + W];
+        let shouldIgnite = false;
+        for (let n = 0; n < 4; n++) {
+          let nIdx = thermiteNeighbors[n];
+          if (nIdx >= 0 && nIdx < SIZE) {
+            let nt = grid[nIdx];
+            if (nt === LAVA || nt === SPARK) {
+              shouldIgnite = true;
+              break;
+            } else if (nt === THERMITE && flags[nIdx] === 1) {
+              if (Math.random() < 0.02) { 
+                shouldIgnite = true;
+                break;
+              }
+            }
+          }
+        }
+        if (shouldIgnite) {
+         flags[i] = 1; 
+          flags[i] = 1;
+          life[i] = Math.floor(Math.random() * 60) + 140; 
+        }
+      }
+      if (flags[i] === 1) {
+        next[i] = THERMITE; 
+        life[i]--;
+        if (life[i] <= 0) {
+          next[i] = LAVA;
+          flags[i] = 0; 
+          return;
+        }
+        let targetY = y + 1;
+        let targetX = x + (Math.random() < 0.3 ? (Math.random() < 0.5 ? -1 : 1) : 0);
+        if (targetY < H && targetX >= 0 && targetX < W) {
+          let meltIdx = targetY * W + targetX;
+          let underType = grid[meltIdx];
+          if (underType === STONE || underType === BRICK || underType === WOOD || underType === BONE) {
+            grid[meltIdx] = LAVA;
+            next[meltIdx] = LAVA;
+            if (typeof playSizzleSound === 'function' && Math.random() < 0.05) playSizzleSound();
+          }
+        }
+        if (Math.random() < 0.25 && y > 1) {
+          let sparkX = x + Math.floor(Math.random() * 5 - 2);
+          let sparkY = y - Math.floor(Math.random() * 3);
+          if (sparkX >= 0 && sparkX < W && sparkY >= 0 && sparkY < H) {
+            let sparkIdx = sparkY * W + sparkX;
+            if (grid[sparkIdx] === EMPTY) {
+              next[sparkIdx] = SPARK;
+              nextLife[sparkIdx] = Math.floor(Math.random() * 5) + 2;
+            }
+          }
+        }
+      }
+      break; 
+    }
+     case LAVA:
+      if (y >= H - 1) return;
+      if (grid[b] === EMPTY || grid[b] === THERMITE || grid[b] === OIL || grid[b] === JUICE || grid[b] === PETROL) { swap(i, b); return; }
+      let ld = Math.random() < 0.5 ? -1 : 1;
+      if (x + ld >= 0 && x + ld < W) {
+        if (grid[b + ld] === EMPTY || grid[b + ld] === JUICE || grid[b + ld] === PETROL) { swap(i, b + ld); return; }
+        if (grid[i + ld] === EMPTY || grid[i + ld] === JUICE || grid[i + ld] === PETROL) { swap(i, i + ld); }
+      }
+      const lavaNeighbors = [i - 1, i + 1, i - W, i + W];
+      for (let n = 0; n < 4; n++) {
+        let nIndex = lavaNeighbors[n];
+        if (nIndex >= 0 && nIndex < SIZE) {
+          if (grid[nIndex] === PETROL) {
+            next[nIndex] = FIRE;
+            nextLife[nIndex] = Math.floor(Math.random() * 25) + 10; 
+          }
+        }
+      }
+      break;
+    case GUNPOWDER:
+      if (y >= H - 1) return;
+      if (grid[b] === EMPTY || grid[b] === THERMITE || grid[b] === WATER || grid[b] === OIL || grid[b] === JUICE || grid[b] === PETROL) { swap(i, b); return; }
+      let gd = Math.random() < 0.5 ? -1 : 1;
+      if (x + gd >= 0 && x + gd < W && grid[b + gd] === EMPTY) { swap(i, b + gd); }
+      break;
+    case FIRE:
+      let fLife = life[i];
+      if (fLife <= 0) {
+        next[i] = Math.random() < 0.3 ? SMOKE : EMPTY;
+        nextLife[i] = next[i] === SMOKE ? 60 : 0;
+        return;
+      }
+      nextLife[i] = fLife - 1;
+      let fnx = x + ((Math.random() * 3) | 0) - 1;
+      let fny = y - 1 + ((Math.random() * 2) | 0);
+      if (fnx >= 0 && fnx < W && fny >= 0 && fny < H) {
+        let fni = fny * W + fnx;
+        let targetBurn = grid[fni];
+        if (targetBurn === EMPTY && Math.random() < 0.15) { 
+          next[fni] = FIRE; 
+          nextLife[fni] = nextLife[i]; 
+        } 
+        else if (targetBurn === OIL) {
+          next[fni] = FIRE;
+          nextLife[fni] = Math.floor(Math.random() * 100) + 70;
+        } 
+        else if (targetBurn === PETROL) {
+          next[fni] = FIRE;
+          nextLife[fni] = Math.floor(Math.random() * 25) + 10; 
+          for (let dx = -3; dx <= 3; dx++) {
+            for (let dy = -2; dy <= 2; dy++) {
+              let fx = fnx + dx;
+              let fy = fny + dy;
+              if (fx >= 0 && fx < W && fy >= 0 && fy < H) {
+                let plumeIdx = fy * W + fx;
+                if (grid[plumeIdx] === EMPTY && Math.random() < 0.45) {
+                  next[plumeIdx] = FIRE;
+                  nextLife[plumeIdx] = Math.floor(Math.random() * 20) + 10;
+                } else if (grid[plumeIdx] === PETROL) {
+                  next[plumeIdx] = FIRE;
+                  nextLife[plumeIdx] = 5;
+                }
+              }
+            }
+          }
+          if (typeof playSplashSound === 'function') playSplashSound(); 
+        }
+      }
+      break;
+    case SMOKE:
+      let sLife = life[i];
+      if (sLife <= 0) { next[i] = EMPTY; return; }
+      nextLife[i] = sLife - 1;
+      let snx = x + ((Math.random() * 3) | 0) - 1;
+      let sny = y - 1 + (Math.random() < 0.2 ? 1 : 0);
+      if (snx >= 0 && snx < W && sny >= 0 && sny < H) {
+        let sni = sny * W + snx; if (grid[sni] === EMPTY && Math.random() < 0.4) swap(i, sni);
+      }
+      break;
+    case STEAM:
+      let stLife = life[i];
+      if (stLife <= 0) { next[i] = Math.random() < 0.15 ? WATER : EMPTY; return; }
+      nextLife[i] = stLife - 1;
+      let stnx = x + ((Math.random() * 3) | 0) - 1;
+      if (stnx >= 0 && stnx < W && y > 0) {
+        let stni = (y - 1) * W + stnx; if (grid[stni] === EMPTY) swap(i, stni);
+      }
+      break;
+    case TNT:
+      if (y < H - 1 && grid[b] === EMPTY) { swap(i, b); return; }
+      if (armed[i] > 0) {
+        armed[i]--; if (armed[i] === 0) triggerExplosion(x, y, 32, "normal"); return;
+      }
+      const tntN = [i-1, i+1, i-W, i+W];
+      for(let n=0; n<4; n++) {
+        if(tntN[n] >= 0 && tntN[n] < SIZE && (grid[tntN[n]] === FIRE || grid[tntN[n]] === LAVA)) { armed[i] = 12; break; }
+      }
+      break;
+    case C4:
+      if (y < H - 1 && grid[b] === EMPTY) { swap(i, b); return; }
+      if (armed[i] > 0) {
+        armed[i]--; if (armed[i] === 0) triggerExplosion(x, y, 55, "c4"); return;
+      }
+      const c4N = [i-1, i+1, i-W, i+W];
+      for(let n=0; n<4; n++) {
+        if(c4N[n] >= 0 && c4N[n] < SIZE && (grid[c4N[n]] === FIRE || grid[c4N[n]] === LAVA)) { armed[i] = 20; break; }
+      }
+      break;
+    case BOMB:
+      if (y >= H - 1) { triggerExplosion(x, y, 35, "normal"); return; }
+      const checkBelowBomb = grid[b];
+      if (checkBelowBomb === EMPTY || checkBelowBomb === WATER || checkBelowBomb === OIL || checkBelowBomb === JUICE || checkBelowBomb === PETROL || checkBelowBomb === HUMAN) {
+        swap(i, b);
+      } else if (checkBelowBomb === BOMB || checkBelowBomb === NUKE) {
+        let bombDir = Math.random() < 0.5 ? -1 : 1;
+        if (x + bombDir >= 0 && x + bombDir < W && (grid[b + bombDir] === EMPTY || grid[b + bombDir] === HUMAN)) swap(i, b + bombDir);
+      } else triggerExplosion(x, y, 35, "normal");
+      break;
+    case NUKE:
+      if (y >= H - 1) { triggerExplosion(x, y, 500, "nuke"); return; }
+      const checkBelowNuke = grid[b];
+      if (checkBelowNuke === EMPTY || checkBelowNuke === WATER || checkBelowNuke === OIL || checkBelowNuke === JUICE || checkBelowNuke === PETROL || checkBelowNuke === HUMAN) {
+        swap(i, b);
+      } else if (checkBelowNuke === BOMB || checkBelowNuke === NUKE) {
+        let nukeDir = Math.random() < 0.5 ? -1 : 1;
+        if (x + nukeDir >= 0 && x + nukeDir < W && (grid[b + nukeDir] === EMPTY || grid[b + nukeDir] === HUMAN)) swap(i, b + nukeDir);
+      } else triggerExplosion(x, y, 500, "nuke");
+      break;
+  }
+}
+function updateSimulation() {
+  nextVx.set(vx); nextVy.set(vy); next.set(grid); nextLife.set(life);
+  if (flashIntensity > 0) {
+    flashIntensity -= 0.03; if (flashIntensity < 0) flashIntensity = 0;
+  }
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      const t = grid[i];
+      if (t === EMPTY || t === STONE || t === BRICK || t === WOOD || t === TNT || t === C4 || t === HUMAN || t === BOMB || t === NUKE || t === BONE || t === WIRE || t === BATTERY || t === LED_R || t === LED_G || t === LED_B || t === SWITCH || t === SOLAR || t === REPEATER || t === TESLA || t === PETRIFIED_WOOD) continue;
+      if (t === SAND || t === WATER || t === OIL || t === LAVA || t === GUNPOWDER || t === JUICE || t === MULCH || t === SEED) {
+        vy[i] += 0.22;
+      }
+      vx[i] *= 0.95; vy[i] *= 0.95;
+      if (Math.abs(vx[i]) > 0.2 || Math.abs(vy[i]) > 0.2) {
+        const tx = Math.max(0, Math.min(W - 1, Math.round(x + vx[i])));
+        const ty = Math.max(0, Math.min(H - 1, Math.round(y + vy[i])));
+        if (tx !== x || ty !== y) {
+          const di = ty * W + tx;
+          if (grid[di] === EMPTY || grid[di] === HUMAN) {
+            next[di] = t; nextLife[di] = life[i];
+            nextVx[di] = vx[i]; nextVy[di] = vy[i];
+            next[i] = EMPTY; nextVx[i] = 0; nextVy[i] = 0;
+          }
+        }
+      }
+    }
+  }
+  grid.set(next); life.set(nextLife); vx.set(nextVx); vy.set(nextVy);
+  for (let k = 0; k < humansList.length; k++) {
+    const h = humansList[k];
+    for (let dy = 0; dy < 4; dy++) {
+      const idxY = (h.y + dy) * W;
+      const p1 = idxY + h.x; const p2 = idxY + h.x + 1;
+      if (grid[p1] === HUMAN) { grid[p1] = EMPTY; next[p1] = EMPTY; }
+      if (grid[p2] === HUMAN) { grid[p2] = EMPTY; next[p2] = EMPTY; }
+    }
+  }
+  const goRight = Math.random() < 0.5;
+  for (let y = H - 1; y >= 0; y--) {
+    if (goRight) {
+      for (let x = 0; x < W; x++) processPixel(x, y);
+    } else {
+      for (let x = W - 1; x >= 0; x--) processPixel(x, y);
+    }
+  }
+  grid.set(next); life.set(nextLife);
+  let alive = [];
+  for (let k = 0; k < humansList.length; k++) {
+    let h = humansList[k];
+    let takingDamage = false;
+    for (let dy = 0; dy < 4; dy++) {
+      const baseIdx = (h.y + dy) * W;
+      if (baseIdx + h.x + 1 >= SIZE || baseIdx + h.x < 0) continue;
+      const t1 = grid[baseIdx + h.x]; const t2 = grid[baseIdx + h.x + 1];
+      if (t1 === LAVA || t1 === FIRE || t1 === ACID || t2 === LAVA || t2 === FIRE || t2 === ACID || t1 === SPARK || t2 === SPARK) {
+        takingDamage = true; h.health -= 1.5; 
+      }
+    }
+    if (takingDamage && h.health > 0) {
+      if (Math.random() < 0.15) playSizzleSound();
+      const leakCount = Math.floor(Math.random() * 10) + 12;
+      for(let j=0; j<leakCount; j++) {
+        let pX = h.x + (Math.random() * 6 - 3) | 0; let pY = h.y + (Math.random() * 4 - 2) | 0;
+        if (pX >= 0 && pX < W && pY >= 0 && pY < H) {
+          let juiceIdx = pY * W + pX;
+          if (grid[juiceIdx] !== HUMAN) {
+            grid[juiceIdx] = JUICE; next[juiceIdx] = JUICE;
+            vx[juiceIdx] = (Math.random() - 0.5) * 6; vy[juiceIdx] = -Math.random() * 3 - 2;
+          }
+        }
+      }
+    }
+    if (h.health <= 0) {
+      for (let j = 0; j < 50; j++) {
+        let pX = h.x + (Math.random() * 12 - 6) | 0; let pY = h.y + (Math.random() * 12 - 6) | 0;
+        if (pX >= 0 && pX < W && pY >= 0 && pY < H) {
+          let juiceIdx = pY * W + pX;
+          if (grid[juiceIdx] !== HUMAN) {
+            grid[juiceIdx] = JUICE; next[juiceIdx] = JUICE;
+            vx[juiceIdx] = (Math.random() - 0.5) * 8; vy[juiceIdx] = -Math.random() * 4 - 1;
+          }
+        }
+      }
+      continue; 
+    }
+    let grounded = false;
+    if (h.y < H - 4) { if (!checkSpaceClear(h.x, h.y + 1, h.id)) grounded = true; } 
+    else grounded = true;
+    if (!grounded) h.y += 1;
+    else {
+      if (Math.random() < 0.06) h.walkDir = Math.random() < 0.5 ? -1 : 1;
+      const nextX = h.x + h.walkDir;
+      if (nextX >= 0 && nextX < W - 1 && checkSpaceClear(nextX, h.y, h.id)) h.x = nextX;
+      else h.walkDir *= -1;
+    }
+    alive.push(h);
+  }
+  humansList = alive;
+  for (let k = 0; k < humansList.length; k++) {
+    const h = humansList[k];
+    for (let dy = 0; dy < 4; dy++) {
+      const baseIdx = (h.y + dy) * W;
+      const p1 = baseIdx + h.x; const p2 = baseIdx + h.x + 1;
+      if (grid[p1] === EMPTY || grid[p1] === WATER || grid[p1] === OIL || grid[p1] === JUICE) { grid[p1] = HUMAN; next[p1] = HUMAN; }
+      if (grid[p2] === EMPTY || grid[p2] === WATER || grid[p2] === OIL || grid[p2] === JUICE) { grid[p2] = HUMAN; next[p2] = HUMAN; }
+    }
+  }
+}
+function renderSimulation() {
+  let activeParticleCount = 0;
+  for (let i = 0; i < SIZE; i++) {
+    const type = grid[i];
+    if (type !== EMPTY) activeParticleCount++;
+    let r = colorR[type];
+    let g = colorG[type];
+    let b = colorB[type];
+    const x = i % W;
+    const y = (i / W) | 0;
+    if (type === PETRIFIED_WOOD) {
+      const noise = flags[i]; 
+      r = Math.max(0, Math.min(255, r + noise));
+      g = Math.max(0, Math.min(255, g + noise));
+      b = Math.max(0, Math.min(255, b + noise));
+    }
+    if (type === THERMITE) {
+      if (flags[i] === 1) {
+        let crackle = Math.floor(Math.sin((x * 0.7) + (y * 0.4) + (Date.now() * 0.08)) * 35);
+        if (life[i] > 130) {
+          r = Math.min(255, 255 + crackle);
+          g = Math.min(255, 255 + crackle);
+          b = Math.max(190, Math.min(255, 240 + crackle)); 
+        } 
+        else if (life[i] > 65) {
+          r = 255;
+          g = Math.max(0, Math.min(255, 215 + crackle));
+          b = Math.max(0, Math.min(255, 45 + crackle));
+        } 
+        else {
+          r = Math.max(0, Math.min(255, 210 + crackle));
+          g = Math.max(0, Math.min(255, 60 + crackle));
+          b = 10;
+        }
+      }
+    }
+    if (type === SPARK) {
+      const orig = flags[i];
+      if (orig === LED_R) { r = 255; g = 50; b = 50; }
+      else if (orig === LED_G) { r = 50; g = 255; b = 50; }
+      else if (orig === LED_B) { r = 50; g = 150; b = 255; }
+      else { r = 200; g = 240; b = 255; } 
+    }
+    if (type === SWITCH) {
+      if (flags[i] === 1) { r = 46; g = 204; b = 113; } 
+      else { r = 110; g = 40; b = 40; } 
+    }
+    if (type === PETROL) {
+      let touchingWater = false;
+      const checkOffsets = [-1, 1, -W, W, -W-1, -W+1, W-1, W+1];
+      for (let o = 0; o < checkOffsets.length; o++) {
+        let neighborIdx = i + checkOffsets[o];
+        if (neighborIdx >= 0 && neighborIdx < SIZE) {
+          if (grid[neighborIdx] === WATER) {
+            touchingWater = true;
+            break;
+          }
+        }
+      }
+      if (touchingWater) {
+        let colorIndex = (x + y + Math.floor(Date.now() / 120)) % RAINBOW_PALETTE.length;
+        r = RAINBOW_PALETTE[colorIndex][0];
+        g = RAINBOW_PALETTE[colorIndex][1];
+        b = RAINBOW_PALETTE[colorIndex][2];
+      } else {
+        r = 26;
+        g = 102;
+        b = 153;
+      }
+    }
+    if (type !== EMPTY && type !== STONE && type !== BRICK && type !== WOOD && type !== BONE && type !== TNT && type !== C4 && type !== HUMAN && type !== WIRE && type !== BATTERY && type !== LED_R && type !== LED_G && type !== LED_B && type !== SPARK && type !== SWITCH && type !== SOLAR && type !== REPEATER && type !== TESLA && type !== PETROL) {
+      const v = flags[i]; r = (r + v) | 0; g = (g + v) | 0; b = (b + v) | 0;
+    }
+    if (type === FIRE) {
+      if (life[i] > 80) { r = 255; g = 235; b = 160; }
+      else if (life[i] < 20) { r = 180; g = 50; b = 5; }
+    }
+    if (type === JUICE) {
+      if ((flags[i] % 4) === 0) { r = 255; g = 75; b = 135; } 
+      else if ((flags[i] % 5) === 0) { r = 185; g = 0; b = 35; }
+    }
+    if (flashIntensity > 0) {
+      r = Math.min(255, r + flashIntensity * 255);
+      g = Math.min(255, g + flashIntensity * 255);
+      b = Math.min(255, b + flashIntensity * 255);
+    }
+    buf[i] = (255 << 24) | (b << 16) | (g << 8) | r;
+  }
+  for (let k = 0; k < humansList.length; k++) {
+    const h = humansList[k];
+    for (let dy = 0; dy < 4; dy++) {
+      let color = dy < 2 ? h.skinColor : h.clothColor;
+      let r = color[0], g = color[1], b = color[2];
+      if (flashIntensity > 0) {
+        r = Math.min(255, r + flashIntensity * 255); g = Math.min(255, g + flashIntensity * 255); b = Math.min(255, b + flashIntensity * 255);
+      }
+      const c32 = (255 << 24) | (b << 16) | (g << 8) | r;
+      const targetY = h.y + dy;
+      if (targetY >= 0 && targetY < H) {
+        const offset = targetY * W;
+        if (h.x >= 0 && h.x < W) buf[offset + h.x] = c32;
+        if (h.x + 1 >= 0 && h.x + 1 < W) buf[offset + h.x + 1] = c32;
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  if (currentElement === LASER && isDrawing && isLaserFiring && lastLaserX !== -1) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.strokeStyle = 'rgba(0, 191, 255, 0.35)';
+    ctx.lineWidth = 14 + Math.sin(Date.now() * 0.08) * 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(lastLaserX, lastLaserStartY);
+    ctx.lineTo(lastLaserX, lastLaserY);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(0, 255, 235, 0.85)';
+    ctx.lineWidth = 5.5;
+    ctx.beginPath();
+    ctx.moveTo(lastLaserX, lastLaserStartY);
+    ctx.lineTo(lastLaserX, lastLaserY);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(lastLaserX, lastLaserStartY);
+    ctx.lineTo(lastLaserX, lastLaserY);
+    ctx.stroke();
+    if (lastLaserY < H) {
+      let flashSize = 10 + Math.random() * 6;
+      let flashGrad = ctx.createRadialGradient(lastLaserX, lastLaserY, 1, lastLaserX, lastLaserY, flashSize);
+      flashGrad.addColorStop(0, '#ffffff');
+      flashGrad.addColorStop(0.3, 'rgba(0, 255, 235, 0.8)');
+      flashGrad.addColorStop(1, 'rgba(0, 150, 255, 0)');
+      ctx.fillStyle = flashGrad;
+      ctx.beginPath();
+      ctx.arc(lastLaserX, lastLaserY, flashSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  if (lightningBolts.length > 0) {
+    const scaleX = canvas.width / W;
+    const scaleY = canvas.height / H;
+    for (let index = lightningBolts.length - 1; index >= 0; index--) {
+      const bolt = lightningBolts[index];
+      ctx.save();
+      let alpha = bolt.timer / 24; 
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = `rgba(0, 191, 255, ${alpha})`;
+      ctx.strokeStyle = `rgba(130, 235, 255, ${alpha * 0.85})`;
+      ctx.lineWidth = 5.5;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      if (bolt.path && bolt.path.length >= 2) {
+        ctx.beginPath();
+        ctx.moveTo(bolt.path[0].x * scaleX, bolt.path[0].y * scaleY);
+        for (let p = 1; p < bolt.path.length; p++) {
+          ctx.lineTo(bolt.path[p].x * scaleX, bolt.path[p].y * scaleY);
+        }
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.lineWidth = 1.8;
+      if (bolt.path && bolt.path.length >= 2) {
+        ctx.beginPath();
+        ctx.moveTo(bolt.path[0].x * scaleX, bolt.path[0].y * scaleY);
+        for (let p = 1; p < bolt.path.length; p++) {
+          ctx.lineTo(bolt.path[p].x * scaleX, bolt.path[p].y * scaleY);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+      bolt.timer--;
+      if (bolt.timer <= 0) {
+        lightningBolts.splice(index, 1);
+      }
+    }
+  }
+  if (isDrawingBox && isLedPlacerActive) {
+    ctx.save();
+    ctx.strokeStyle = "#5dade2"; 
+    ctx.lineWidth = 2;
+    const xMin = Math.min(boxStartX, boxEndX);
+    const yMin = Math.min(boxStartY, boxEndY);
+    const wBox = Math.abs(boxEndX - boxStartX) + 1; 
+    const hBox = Math.abs(boxEndY - boxStartY) + 1; 
+    ctx.strokeRect(xMin, yMin, wBox, hBox);
+    ctx.restore();
+  }
+  particleDisplay.textContent = "Particles: " + (activeParticleCount + humansList.length * 8);
+}
+function loop(timestamp) {
+  framesCount++;
+  if (timestamp - lastFpsUpdate >= 1000) {
+    currentFps = Math.round((framesCount * 1000) / (timestamp - lastFpsUpdate));
+    if (fpsDisplay) fpsDisplay.textContent = `FPS: ${currentFps}`;
+    framesCount = 0; 
+    lastFpsUpdate = timestamp;
+  }
+  if (isDrawing && !isLedPlacerActive) {
+    if (typeof handleMouseOrTouchPosition === "function" && lastMouseX !== undefined) {
+      handleMouseOrTouchPosition(lastMouseX, lastMouseY);
+    }
+  }
+  if (!isPaused) {
+    timeAccumulator += timeScale;
+    while (timeAccumulator >= 1.0) {
+      updateSimulation(); 
+      timeAccumulator -= 1.0;
+      if (isDrawing && currentElement === LASER && lastLaserX !== -1) {
+        fireLaser(lastLaserX, lastLaserY);
+      }
+    }
+  }
+  renderSimulation();
+  requestAnimationFrame(loop);
+}
+const btnToggleLed = document.getElementById("btn-toggle-led");
+const ledToolOptions = document.getElementById("led-tool-options");
+btnToggleLed.onclick = () => {
+  isLedPlacerActive = !isLedPlacerActive;
+  if (isLedPlacerActive) {
+    btnToggleLed.textContent = "Mode: Drawing LED Sign Box";
+    btnToggleLed.style.backgroundColor = "var(--bg-btn-active)";
+    ledToolOptions.style.display = "flex";
+    ELEMENT_DEFS.forEach(d => {
+      const b = document.getElementById(`elem-${d.id}`);
+      if (b) b.classList.remove("active");
+    });
+  } else {
+    btnToggleLed.textContent = "Mode: Painting elements";
+    btnToggleLed.style.backgroundColor = "#2c3e50";
+    ledToolOptions.style.display = "none";
+    isDrawingBox = false;
+    selectElement(currentElement);
+  }
+};
+function selectElement(id) {
+  if (isLedPlacerActive) {
+    isLedPlacerActive = false;
+    btnToggleLed.textContent = "Mode: Painting elements";
+    btnToggleLed.style.backgroundColor = "#2c3e50";
+    ledToolOptions.style.display = "none";
+    isDrawingBox = false;
+  }
+  currentElement = id;
+  ELEMENT_DEFS.forEach(d => {
+    const b = document.getElementById(`elem-${d.id}`);
+    if (b) b.classList.toggle("active", d.id === id);
+  });
+}
+canvas.addEventListener("pointerdown", e => {
+  if (e.button !== 0) return;
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  window.lightningFiredThisClick = false; 
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.max(0, Math.min(W - 1, Math.floor((e.clientX - rect.left) * (W / rect.width))));
+  const y = Math.max(0, Math.min(H - 1, Math.floor((e.clientY - rect.top) * (H / rect.height))));
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+  if (isLedPlacerActive) {
+    isDrawingBox = true;
+    isDrawing = false; 
+    boxStartX = x;
+    boxStartY = y;
+    boxEndX = x;
+    boxEndY = y;
+  } else {
+    isDrawing = true;
+    isDrawingBox = false;
+    if (currentElement === WIRE || currentElement === LED_R || currentElement === LED_G || currentElement === LED_B || currentElement === SWITCH || currentElement === SOLAR || currentElement === REPEATER || currentElement === TESLA) {
+      const r = brushSize;
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (dx * dx + dy * dy > r * r) continue;
+          const nx = x + dx; const ny = y + dy;
+          if (nx >= 0 && nx < W && ny >= 0 && ny < H) {
+            flags[ny * W + nx] = currentElement;
+          }
+        }
+      }
+    }
+    if (typeof handleMouseOrTouchPosition === "function") {
+      handleMouseOrTouchPosition(e.clientX, e.clientY);
+    }
+  }
+});
+window.addEventListener("pointermove", e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.max(0, Math.min(W - 1, Math.floor((e.clientX - rect.left) * (W / rect.width))));
+  const y = Math.max(0, Math.min(H - 1, Math.floor((e.clientY - rect.top) * (H / rect.height))));
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+  if (isLedPlacerActive) {
+    if (!isDrawingBox) return;
+    boxEndX = x;
+    boxEndY = y;
+  } else {
+    if (!isDrawing) return;
+    if (currentElement === WIRE || currentElement === LED_R || currentElement === LED_G || currentElement === LED_B || currentElement === SWITCH || currentElement === SOLAR || currentElement === REPEATER || currentElement === TESLA) {
+      const r = brushSize;
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (dx * dx + dy * dy > r * r) continue;
+          const nx = x + dx; const ny = y + dy;
+          if (nx >= 0 && nx < W && ny >= 0 && ny < H) {
+            flags[ny * W + nx] = currentElement;
+          }
+        }
+      }
+    }
+    if (typeof handleMouseOrTouchPosition === "function") {
+       handleMouseOrTouchPosition(e.clientX, e.clientY); 
+    }
+  }
+});
+window.addEventListener("pointerup", () => {
+  if (isLedPlacerActive && isDrawingBox) {
+    isDrawingBox = false;
+    const textInput = document.getElementById("led-text-input");
+    const text = textInput ? textInput.value.toUpperCase() : "";
+    if (text.trim()) {
+      const colorElement = document.getElementById("led-text-color");
+      const colorSelect = colorElement ? colorElement.value : "red";
+      let ledElement = LED_R;
+      if (colorSelect === "green") ledElement = LED_G;
+      if (colorSelect === "blue") ledElement = LED_B;
+      const xMin = Math.min(boxStartX, boxEndX);
+      const xMax = Math.max(boxStartX, boxEndX);
+      const yMin = Math.min(boxStartY, boxEndY);
+      const yMax = Math.max(boxStartY, boxEndY);
+      const boxW = xMax - xMin;
+      const boxH = yMax - yMin;
+      if (boxW >= 4 && boxH >= 4) {
+        const fontWidth = 5;
+        const fontHeight = 5;
+        const normalStringWidth = text.length * 6 - 1;
+        const scaleX = boxW / normalStringWidth;
+        const scaleY = boxH / fontHeight;
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+          const glyph = FONT[char] || FONT['?'];
+          const charBoxStartX = xMin + (i * 6) * scaleX;
+          for (let col = 0; col < fontWidth; col++) {
+            const colData = glyph[col];
+            const pxStart = Math.floor(charBoxStartX + col * scaleX);
+            const pxEnd = Math.floor(charBoxStartX + (col + 1) * scaleX);
+            for (let row = 0; row < fontHeight; row++) {
+              if ((colData >> row) & 1) {
+                const pyStart = Math.floor(yMin + (fontHeight - 1 - row) * scaleY);
+                const pyEnd = Math.floor(yMin + (fontHeight - row) * scaleY);
+                for (let py = pyStart; py < pyEnd; py++) {
+                  for (let px = pxStart; px < pxEnd; px++) {
+                    if (px >= 0 && px < W && py >= 0 && py < H) {
+                      const idx = py * W + px;
+                      grid[idx] = ledElement;
+                      next[idx] = ledElement;
+                      flags[idx] = ledElement; 
+                      vx[idx] = 0;
+                      vy[idx] = 0;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  isDrawing = false;
+  isDrawingBox = false;
+  window.lightningFiredThisClick = false;
+  if (typeof lastLaserX !== "undefined") { lastLaserX = -1; lastLaserY = -1; }
+  if (typeof stopLaserSound === "function") stopLaserSound();
+});
+canvas.addEventListener("touchstart", e => {
+  e.preventDefault();
+  if (e.touches.length > 0) {
+    const t = e.touches[0];
+    const fakePointerEvent = { button: 0, clientX: t.clientX, clientY: t.clientY };
+    canvas.dispatchEvent(new PointerEvent("pointerdown", fakePointerEvent));
+  }
+}, { passive: false });
+canvas.addEventListener("touchmove", e => {
+  e.preventDefault();
+  if (e.touches.length > 0) {
+    const t = e.touches[0];
+    const fakePointerEvent = { clientX: t.clientX, clientY: t.clientY };
+    window.dispatchEvent(new PointerEvent("pointermove", fakePointerEvent));
+  }
+}, { passive: false });
+window.addEventListener("touchend", e => {
+  if (e.touches.length === 0) {
+    window.dispatchEvent(new PointerEvent("pointerup"));
+  }
+});
+brushSizeInput.addEventListener("input", e => {
+  brushSize = parseInt(e.target.value);
+  if(brushValDisplay) brushValDisplay.textContent = brushSize;
+});
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  if (e.deltaY < 0) {
+    brushSize = Math.min(25, brushSize + 1);
+  } else {
+    brushSize = Math.max(1, brushSize - 1);
+  }
+  if(brushSizeInput) brushSizeInput.value = brushSize;
+  if(brushValDisplay) brushValDisplay.textContent = brushSize;
+}, { passive: false });
+if (speedInput) {
+  speedInput.addEventListener("input", e => {
+    timeScale = parseFloat(e.target.value);
+    if(speedValDisplay) speedValDisplay.textContent = timeScale.toFixed(2) + "x";
+  });
+}
+if (btnPause) {
+  btnPause.onclick = () => {
+    isPaused = !isPaused;
+    btnPause.textContent = isPaused ? "Resume" : "Pause";
+    btnPause.classList.toggle("active", isPaused);
+  };
+}
+if (btnClear) {
+  btnClear.onclick = () => {
+    grid.fill(EMPTY);
+    next.fill(EMPTY);
+    vx.fill(0);
+    vy.fill(0);
+    flags.fill(0);
+    life.fill(0);
+    armed.fill(0);
+    humansList = [];
+    lightningBolts = [];
+  };
+}
+if (uiGrid) {
+  ELEMENT_DEFS.forEach(el => {
+    if (!el.showInUI) return;
+    const button = document.createElement("button");
+    button.id = `elem-${el.id}`;
+    button.className = "btn";
+    if (el.id === currentElement) button.classList.add("active");
+    const preview = document.createElement("span");
+    preview.className = "color-preview";
+    preview.style.backgroundColor = `rgb(${el.color[0]}, ${el.color[1]}, ${el.color[2]})`;
+    const text = document.createElement("span");
+    text.textContent = el.name;
+    button.appendChild(preview);
+    button.appendChild(text);
+    button.onclick = () => selectElement(el.id);
+    uiGrid.appendChild(button);
+  });
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
